@@ -12,13 +12,17 @@
 /** Tells us whether someone has buzzed or not. */
 boolean lockout = false;
 
-/** The input array that tells us the state of the switches denoting
- *  the players. 
+/** 
+ * The array that tells us in which order we will be checking the buzzers
+ * this time around.
  */
-int playerArray [10];
+int randArray[10];
 
 /** Describes the player that has buzzed. -1 if no one has buzzed. */
 int activePlayer = -1;
+
+/** Gives the number of turns left until we reseed the random number generator. */
+int resetTimer;
 
 /** Determines the inputs given to the board and acts accordingly. */
 void getInputs();
@@ -53,7 +57,9 @@ void checkReset();
  * Pin A4-A5: These pins are unused.
  */
 void setup() {
-  Serial.begin(9600);
+  if (DEBUG) {
+    Serial.begin(9600);
+  }
   for(int i = 0; i < BUZZERS; i++) {
     pinMode(i, INPUT_PULLUP);
   }
@@ -72,36 +78,40 @@ void setup() {
   digitalWrite(A2, LOW);
   digitalWrite(A3, LOW);
   randomSeed(analogRead(A4));
+  resetTimer = random(1, analogRead(A4));
 }
 
 void loop() {
-  if (!lockout) {
+  for (int i = 0; i < 10; i++) {
+    randArray[i] = i;
+  }  
+  for (int i = 0; i < 10; i++) {
+    int x = random(i, 9);
+    int y = randArray[x];
+    int temp = randArray[i];
+    randArray[i] = y;
+    randArray[x] = temp;
+  }
+  while (!lockout) {
     getInputs();
-  } else {
+  }
+  activateBuzzer();
+  while (lockout) {
     checkReset();
   }
 }
 
 void getInputs() {
-  int swap [10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   for (int i = 0; i < 10; i++) {
-    int x = random(i, 9);
-    int y = swap[x];
-    int temp = swap[i];
-    swap[i] = y;
-    swap[x] = temp;
-  }
-  for (int i = 0; i < 10; i++) {
-    boolean input = digitalRead(swap[i]);
+    boolean input = digitalRead(randArray[i]);
     if (!input) {
       lockout = true;
-      activePlayer = swap[i];
+      activePlayer = randArray[i];
       if (DEBUG) {
         Serial.print("Player ");
         Serial.print(activePlayer + 1);
         Serial.println(" hit the buzzer!");
       }
-      activateBuzzer();
       break;
     }
   }
@@ -186,5 +196,9 @@ void performReset() {
   if (DEBUG) {
     Serial.println("Reset.");
   }
-  randomSeed(analogRead(A4));
+  resetTimer--;
+  if (resetTimer <= 0) {
+    randomSeed(analogRead(A4));
+  }
+  resetTimer = random(1, analogRead(A4));
 }
