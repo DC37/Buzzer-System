@@ -37,6 +37,13 @@ void activateBuzzer();
  */
 void lightLED();
 
+/** 
+ * Decodes the multiplexed matrix of LED lighting and outputs to the 
+ * according pins.
+ */
+void decodeMatrix(boolean aZero, boolean aOne, boolean aTwo, boolean aThree,
+    boolean aFour, boolean eleven, boolean twelve);
+
 /** Shuts off all LED lights and such. */
 void turnOffAllLights();
 
@@ -50,11 +57,11 @@ void checkReset();
  * Pin 10: This pin activates the buzzer sound. We'll probably be
  * sending PWM through it or activating some oscillator.
  * Pin 11: This pin is connected to a reset switch.
- * Pin 12: This pin is unused.
- * Pin 13: This pin is used as a debug indicator.
- * Pins A0-A3: Output LED pins for a binary decoder (tbd - if this
- * proves to be too complicated, we'll be using more pins.)
- * Pin A4-A5: These pins are unused.
+ * Pins A0-A4: This is a multiplexed LED array output. We'll be setting
+ * these pins alternately to HIGH and LOW to code for 9 different LEDs.
+ * Pin A5: This is used to seed the random number generator.
+ * Pin 12: This is the last pin for the multiplexed LED array output.
+ * Pin 13: This pin is for player 10.
  */
 void setup() {
   if (DEBUG) {
@@ -67,7 +74,11 @@ void setup() {
   pinMode(A1, OUTPUT);
   pinMode(A2, OUTPUT);
   pinMode(A3, OUTPUT);
-  pinMode(A4, INPUT);
+  pinMode(A4, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(A5, INPUT);
   pinMode(RESETPIN, INPUT_PULLUP);
   pinMode(SOUNDPIN, OUTPUT);
   pinMode(INDICATOR, OUTPUT);
@@ -77,8 +88,12 @@ void setup() {
   digitalWrite(A1, LOW);
   digitalWrite(A2, LOW);
   digitalWrite(A3, LOW);
-  randomSeed(analogRead(A4));
-  resetTimer = random(1, analogRead(A4));
+  digitalWrite(A4, LOW);
+  digitalWrite(11, LOW);
+  digitalWrite(12, LOW);
+  digitalWrite(13, LOW);
+  randomSeed(analogRead(A5));
+  resetTimer = random(1, analogRead(A5));
 }
 
 void loop() {
@@ -132,55 +147,68 @@ void activateBuzzer() {
   digitalWrite(INDICATOR, LOW);
 }
 
+/**
+ * The LED matrix is defined as follows:
+ * Sources: A0, A1, A2
+ * Sinks: A4, 11, 12
+ */
 void lightLED() {
   switch(activePlayer) {
     case 0:
-      digitalWrite(A0, HIGH);
+      decodeMatrix(true, false, false, false, true, true);
       break;
     case 1:
-      digitalWrite(A1, HIGH);
+      decodeMatrix(false, true, false, false, true, true);
       break;
     case 2:
-      digitalWrite(A0, HIGH);
-      digitalWrite(A1, HIGH);
+      decodeMatrix(false, false, true, false, true, true);
       break;
     case 3:
-      digitalWrite(A2, HIGH);
+      decodeMatrix(true, false, false, true, false, true);
       break;
     case 4:
-      digitalWrite(A0, HIGH);
-      digitalWrite(A2, HIGH);
+      decodeMatrix(false, true, false, true, false, true);
       break;
     case 5:
-      digitalWrite(A1, HIGH);
-      digitalWrite(A2, HIGH);
+      decodeMatrix(false, false, true, true, false, true);
       break;
     case 6:
-      digitalWrite(A0, HIGH);
-      digitalWrite(A1, HIGH);
-      digitalWrite(A2, HIGH);
+      decodeMatrix(true, false, false, true, true, false);
       break;
     case 7:
-      digitalWrite(A3, HIGH);
+      decodeMatrix(false, true, false, true, true, false);
       break;
     case 8:
-      digitalWrite(A0, HIGH);
-      digitalWrite(A3, HIGH);
+      decodeMatrix(false, false, true, true, true, false);
       break;
     case 9:
-      digitalWrite(A1, HIGH);
-      digitalWrite(A3, HIGH);
+      decodeMatrix(false, false, false, false, false, false);
+      digitalWrite(13, true);
       break;
     default:
       break;
   }
 }
 
+void decodeMatrix(boolean aZero, boolean aOne, boolean aTwo, boolean aThree,
+  boolean aFour, boolean twelve) {
+  digitalWrite(A0, aZero);
+  digitalWrite(A1, aOne);
+  digitalWrite(A2, aTwo);
+  digitalWrite(A3, aThree);
+  digitalWrite(A4, aFour);
+  digitalWrite(12, twelve);
+}
+
+
 void turnOffAllLights() {
   digitalWrite(A0, LOW);
   digitalWrite(A1, LOW);
   digitalWrite(A2, LOW);
   digitalWrite(A3, LOW);
+  digitalWrite(A4, LOW);
+  digitalWrite(12, LOW);
+  digitalWrite(13, LOW);
 }
 
 void checkReset() {
@@ -198,7 +226,7 @@ void performReset() {
   }
   resetTimer--;
   if (resetTimer <= 0) {
-    randomSeed(analogRead(A4));
+    randomSeed(analogRead(A5));
   }
-  resetTimer = random(1, analogRead(A4));
+  resetTimer = random(1, analogRead(A5));
 }
