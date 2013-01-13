@@ -3,11 +3,10 @@
  * for different buzzers and lights.
  * Date: December 27, 2012
  */
-#define DEBUG true
+#define DEBUG false
 #define BUZZERS 10
 #define SOUNDPIN 10
 #define RESETPIN 11
-#define INDICATOR 13
 
 /** Tells us whether someone has buzzed or not. */
 boolean lockout = false;
@@ -75,21 +74,17 @@ void setup() {
   pinMode(A2, OUTPUT);
   pinMode(A3, OUTPUT);
   pinMode(A4, OUTPUT);
-  pinMode(11, OUTPUT);
+  pinMode(SOUNDPIN, OUTPUT);
+  pinMode(RESETPIN, INPUT_PULLUP);
   pinMode(12, OUTPUT);
   pinMode(13, OUTPUT);
   pinMode(A5, INPUT);
-  pinMode(RESETPIN, INPUT_PULLUP);
-  pinMode(SOUNDPIN, OUTPUT);
-  pinMode(INDICATOR, OUTPUT);
   digitalWrite(SOUNDPIN, LOW);
-  digitalWrite(INDICATOR, LOW);
   digitalWrite(A0, LOW);
   digitalWrite(A1, LOW);
   digitalWrite(A2, LOW);
   digitalWrite(A3, LOW);
   digitalWrite(A4, LOW);
-  digitalWrite(11, LOW);
   digitalWrite(12, LOW);
   digitalWrite(13, LOW);
   randomSeed(analogRead(A5));
@@ -110,7 +105,6 @@ void loop() {
   while (!lockout) {
     getInputs();
   }
-  activateBuzzer();
   while (lockout) {
     checkReset();
   }
@@ -118,8 +112,7 @@ void loop() {
 
 void getInputs() {
   for (int i = 0; i < 10; i++) {
-    boolean input = digitalRead(randArray[i]);
-    if (!input) {
+    if (!digitalRead(randArray[i])) {
       lockout = true;
       activePlayer = randArray[i];
       if (DEBUG) {
@@ -127,6 +120,7 @@ void getInputs() {
         Serial.print(activePlayer + 1);
         Serial.println(" hit the buzzer!");
       }
+      activateBuzzer();
       break;
     }
   }
@@ -135,22 +129,21 @@ void getInputs() {
 void activateBuzzer() {
   lightLED();
   digitalWrite(SOUNDPIN, HIGH);
-  digitalWrite(INDICATOR, HIGH);
-  for (int i = 0; i < 1000; i++) {
-    delay(1);
+  for (int i = 0; i < 100; i++) {
+    delay(10);
     if (!digitalRead(RESETPIN)) {
       performReset();
+      digitalWrite(SOUNDPIN, LOW);
       return;
     }
   }
   digitalWrite(SOUNDPIN, LOW);
-  digitalWrite(INDICATOR, LOW);
 }
 
 /**
  * The LED matrix is defined as follows:
  * Sources: A0, A1, A2
- * Sinks: A4, 11, 12
+ * Sinks: A3, A4, 11
  */
 void lightLED() {
   switch(activePlayer) {
@@ -186,12 +179,15 @@ void lightLED() {
       digitalWrite(13, true);
       break;
     default:
+      decodeMatrix(false, false, false, false, false, false);
+      digitalWrite(13, false);
       break;
   }
 }
 
 void decodeMatrix(boolean aZero, boolean aOne, boolean aTwo, boolean aThree,
   boolean aFour, boolean twelve) {
+  digitalWrite(13, false);
   digitalWrite(A0, aZero);
   digitalWrite(A1, aOne);
   digitalWrite(A2, aTwo);
@@ -199,7 +195,6 @@ void decodeMatrix(boolean aZero, boolean aOne, boolean aTwo, boolean aThree,
   digitalWrite(A4, aFour);
   digitalWrite(12, twelve);
 }
-
 
 void turnOffAllLights() {
   digitalWrite(A0, LOW);
@@ -212,7 +207,9 @@ void turnOffAllLights() {
 }
 
 void checkReset() {
-  if (!digitalRead(RESETPIN)) {
+  boolean x = !digitalRead(RESETPIN);
+  boolean y = !digitalRead(RESETPIN);
+  if (x && y) {
     performReset();
   }
 }
