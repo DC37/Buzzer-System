@@ -129,7 +129,7 @@ void getInputs() {
 void activateBuzzer() {
   lightLED();
   digitalWrite(SOUNDPIN, HIGH);
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 150; i++) {
     delay(10);
     if (!digitalRead(RESETPIN)) {
       performReset();
